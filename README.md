@@ -4,12 +4,13 @@ A clean, functional travel planning assistant that helps users find hotel deals 
 
 > Built as part of a Software Engineer application to trivago — Marketing Solutions team
 
+**Live Demo:** [https://trivago-mcp-demo.vercel.app](https://trivago-mcp-demo.vercel.app)
+
 ## Screenshots
 
-<!-- Add screenshots here -->
-| Search Form | Hotel Results |
-|-------------|---------------|
-| ![Search](screenshots/search.png) | ![Results](screenshots/results.png) |
+| Search Form | Hotel Results                      |
+|-------------|------------------------------------|
+| ![Search](screenshots/search.png) | ![Results](screenshots/hotels.png) |
 
 ## How It Works
 
