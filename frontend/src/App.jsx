@@ -1,8 +1,16 @@
 import { useState } from "react";
 import SearchForm from "./components/SearchForm";
 import ResultsList from "./components/ResultsList";
+import ChatInterface from "./components/ChatInterface";
+
+const TABS = [
+  { id: "chat", label: "AI Chat", badge: "NEW" },
+  { id: "city", label: "Search by City" },
+  { id: "radius", label: "Search by Coordinates" },
+];
 
 function App() {
+  const [activeTab, setActiveTab] = useState("chat");
   const [results, setResults] = useState(null);
   const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,9 +28,7 @@ function App() {
       let res, data;
 
       if (params.mode === "radius") {
-        // Uses: trivago-accommodation-radius-search
         setToolsUsed(["trivago-accommodation-radius-search"]);
-
         res = await fetch("/api/radius-search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -35,26 +41,22 @@ function App() {
             adults: Number(params.adults),
           }),
         });
-
         data = await res.json();
         if (!res.ok) throw new Error(data.error || "Search failed");
         if (data.error) throw new Error(data.error);
 
         const hotels = data.accommodations || [];
         setDestination(`${params.latitude}, ${params.longitude}`);
-
         if (hotels.length === 0) {
           setError("No hotels found near these coordinates. Try a larger radius.");
         } else {
           setResults(hotels);
         }
       } else {
-        // Uses: trivago-search-suggestions → trivago-accommodation-search
         setToolsUsed([
           "trivago-search-suggestions",
           "trivago-accommodation-search",
         ]);
-
         res = await fetch("/api/search", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -65,14 +67,12 @@ function App() {
             adults: Number(params.adults),
           }),
         });
-
         data = await res.json();
         if (!res.ok) throw new Error(data.error || "Search failed");
         if (data.error) throw new Error(data.error);
 
         const hotels = data.accommodations || [];
         setDestination(data.destination || params.destination);
-
         if (hotels.length === 0) {
           setError("No hotels found for this destination. Try a different search.");
         } else {
@@ -84,6 +84,16 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Reset manual-search results when switching tabs so stale data doesn't bleed in.
+  const switchTab = (tabId) => {
+    if (tabId === activeTab) return;
+    setActiveTab(tabId);
+    setResults(null);
+    setDestination("");
+    setError(null);
+    setToolsUsed([]);
   };
 
   return (
@@ -110,86 +120,119 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <SearchForm onSearch={handleSearch} loading={loading} />
+      <main className="max-w-5xl mx-auto px-4 py-6">
+        {/* Top-level Tabs */}
+        <div className="flex flex-wrap gap-2 mb-5">
+          {TABS.map((tab) => {
+            const active = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => switchTab(tab.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition flex items-center gap-2 ${
+                  active
+                    ? "bg-trivago-orange text-white shadow-sm"
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-trivago-orange hover:text-trivago-orange"
+                }`}
+              >
+                {tab.label}
+                {tab.badge && (
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      active
+                        ? "bg-white text-trivago-orange"
+                        : "bg-trivago-orange text-white"
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-10 h-10 border-4 border-trivago-orange border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-500">Searching for the best deals...</p>
-            {toolsUsed.length > 0 && (
-              <p className="mt-2 text-xs text-gray-400">
-                Calling: {toolsUsed.map((t) => (
-                  <span key={t} className="font-mono bg-gray-100 px-1.5 py-0.5 rounded mx-0.5">{t}</span>
-                ))}
-              </p>
-            )}
-          </div>
-        )}
+        {/* Chat tab */}
+        {activeTab === "chat" && <ChatInterface />}
 
-        {/* Error State */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-6">
-            <p className="text-red-600">{error}</p>
-          </div>
-        )}
+        {/* Manual-search tabs */}
+        {activeTab !== "chat" && (
+          <>
+            <SearchForm
+              onSearch={handleSearch}
+              loading={loading}
+              searchMode={activeTab}
+            />
 
-        {/* MCP Tools Used Badge */}
-        {results && !loading && toolsUsed.length > 0 && (
-          <div className="mt-6 flex items-center gap-2 text-xs text-gray-400">
-            <span>MCP tools used:</span>
-            {toolsUsed.map((t, i) => (
-              <span key={t} className="flex items-center gap-1">
-                {i > 0 && <span className="text-trivago-orange">→</span>}
-                <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{t}</span>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Results */}
-        {results && !loading && (
-          <ResultsList hotels={results} destination={destination} />
-        )}
-
-        {/* Empty initial state */}
-        {!results && !loading && !error && (
-          <div className="text-center py-16 text-gray-400">
-            <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <p className="text-lg">Search for hotels in any destination</p>
-            <p className="text-sm mt-1">Enter a city or coordinates, pick dates, and start exploring</p>
-
-            {/* MCP Tools Overview */}
-            <div className="mt-8 max-w-lg mx-auto text-left">
-              <p className="text-sm font-medium text-gray-500 mb-3 text-center">This app uses 3 trivago MCP tools:</p>
-              <div className="space-y-2">
-                <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-gray-100">
-                  <span className="text-trivago-orange font-bold text-lg">1</span>
-                  <div>
-                    <p className="text-sm font-mono text-gray-700">trivago-search-suggestions</p>
-                    <p className="text-xs text-gray-400">Autocomplete as you type — resolves "Paris" into a location ID</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-gray-100">
-                  <span className="text-trivago-orange font-bold text-lg">2</span>
-                  <div>
-                    <p className="text-sm font-mono text-gray-700">trivago-accommodation-search</p>
-                    <p className="text-xs text-gray-400">Searches hotels by resolved location ID + dates + guests</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 bg-white rounded-lg p-3 border border-gray-100">
-                  <span className="text-trivago-orange font-bold text-lg">3</span>
-                  <div>
-                    <p className="text-sm font-mono text-gray-700">trivago-accommodation-radius-search</p>
-                    <p className="text-xs text-gray-400">Searches hotels near lat/lng coordinates within a radius</p>
-                  </div>
-                </div>
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="w-10 h-10 border-4 border-trivago-orange border-t-transparent rounded-full animate-spin"></div>
+                <p className="mt-4 text-gray-500">Searching for the best deals...</p>
+                {toolsUsed.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-400">
+                    Calling:{" "}
+                    {toolsUsed.map((t) => (
+                      <span
+                        key={t}
+                        className="font-mono bg-gray-100 px-1.5 py-0.5 rounded mx-0.5"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </p>
+                )}
               </div>
-            </div>
-          </div>
+            )}
+
+            {error && !loading && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center mt-6">
+                <p className="text-red-600">{error}</p>
+              </div>
+            )}
+
+            {results && !loading && toolsUsed.length > 0 && (
+              <div className="mt-6 flex items-center gap-2 text-xs text-gray-400">
+                <span>MCP tools used:</span>
+                {toolsUsed.map((t, i) => (
+                  <span key={t} className="flex items-center gap-1">
+                    {i > 0 && <span className="text-trivago-orange">→</span>}
+                    <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+                      {t}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {results && !loading && (
+              <ResultsList hotels={results} destination={destination} />
+            )}
+
+            {!results && !loading && !error && (
+              <div className="text-center py-16 text-gray-400">
+                <svg
+                  className="w-16 h-16 mx-auto mb-4 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <p className="text-lg">Search for hotels in any destination</p>
+                <p className="text-sm mt-1">
+                  {activeTab === "city"
+                    ? "Enter a city, pick dates, and start exploring"
+                    : "Enter coordinates, pick dates, and start exploring"}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </main>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-function SearchForm({ onSearch, loading }) {
+function SearchForm({ onSearch, loading, searchMode = "city" }) {
   const today = new Date().toISOString().split("T")[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
@@ -18,8 +18,7 @@ function SearchForm({ onSearch, loading }) {
   const suggestionsRef = useRef(null);
   const debounceRef = useRef(null);
 
-  // Search mode toggle
-  const [searchMode, setSearchMode] = useState("city"); // "city" or "radius"
+  // Coordinate-search state
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [radius, setRadius] = useState(5000);
@@ -128,32 +127,6 @@ function SearchForm({ onSearch, loading }) {
       onSubmit={handleSubmit}
       className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
     >
-      {/* Search Mode Toggle */}
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setSearchMode("city")}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-            searchMode === "city"
-              ? "bg-trivago-orange text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          Search by City
-        </button>
-        <button
-          type="button"
-          onClick={() => setSearchMode("radius")}
-          className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-            searchMode === "radius"
-              ? "bg-trivago-orange text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
-        >
-          Search by Coordinates
-        </button>
-      </div>
-
       {/* MCP Tool indicator */}
       <p className="text-xs text-gray-400 mb-3">
         MCP Tool:{" "}

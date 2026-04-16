@@ -2,6 +2,7 @@
   "name": "trivago-mcp-demo",
   "version": "1.0.0",
   "description": "Travel planning assistant using trivago MCP Server",
+  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && node server.js",
@@ -13,5 +14,8 @@
     "concurrently": "^8.2.2"
   },
   "author": "Umar Farook M <umarfarookbtech@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.104.0"
+  }
 }
